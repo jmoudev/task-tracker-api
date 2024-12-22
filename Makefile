@@ -18,6 +18,19 @@ install: venv
 	@echo "Installing Python packages"
 	$(VENV)/python -m pip --disable-pip-version-check install -r requirements.txt
 
+.PHONY: install-dev
+install-dev: venv
+	@echo "Install dev Python packages"
+	$(VENV)/python -m pip --disable-pip-version-check install -r requirements-dev.txt
+
+.PHONY: lint
+lint: install-dev
+	$(VENV)/ruff check . --fix
+
+.PHONY: format
+format: install-dev
+	$(VENV)/ruff format .
+
 .PHONY: clean-install
 clean-install: remove-venv install
 
