@@ -19,7 +19,7 @@ install: venv
 	$(VENV)/python -m pip --disable-pip-version-check install -r requirements.txt
 
 .PHONY: install-dev
-install-dev: venv
+install-dev: install
 	@echo "Install dev Python packages"
 	$(VENV)/python -m pip --disable-pip-version-check install -r requirements-dev.txt
 
