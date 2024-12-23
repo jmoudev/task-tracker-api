@@ -33,5 +33,6 @@ def create_todo(todo: ToDo):
     todo_id = todo_data["metadata"]["todo_count"] + 1
     todo_list_item = {"id": todo_id} | todo.dict()
     todo_data["todos"][str(todo_id)] = todo_list_item
+    todo_data["metadata"]["todo_count"] += 1
     utils.write_json(TODO_JSON_FILENAME, todo_data)
     return todo_list_item
