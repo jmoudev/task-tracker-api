@@ -1,4 +1,4 @@
-from fastapi import FastAPI, status
+from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
 
 import utils
@@ -47,3 +47,13 @@ def update_todo(todo_id: int, todo: ToDo):
     todo_data["todos"][str(todo_id)] = todo_list_item
     utils.write_json(TODO_JSON_FILENAME, todo_data)
     return todo_list_item
+
+
+@app.delete("/todos/{todo_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_todo(todo_id: int):
+    todo_data = utils.read_todo_data(TODO_JSON_FILENAME)
+    try:
+        del todo_data["todos"][str(todo_id)]
+    except KeyError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"todo not found (id {todo_id})")
+    utils.write_json(TODO_JSON_FILENAME, todo_data)
