@@ -6,10 +6,10 @@ import sqlite3
 TODO_SQL_DB = "todos.db"
 
 
-def execute_query(db, query, commit=False, return_value=False):
+def execute_query(db, query, params, commit=False, return_value=False):
     con = sqlite3.connect(db)
     cur = con.cursor()
-    result = cur.execute(query)
+    result = cur.execute(query, params)
     if return_value:
         rows = result.fetchall()
     if commit:

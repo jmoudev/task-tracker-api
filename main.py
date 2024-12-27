@@ -1,4 +1,5 @@
 from typing import Annotated, Optional
+from sqlite3 import IntegrityError
 
 from fastapi import FastAPI, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -33,7 +34,10 @@ class ToDoListItem(ToDo, ToDoID):
 def create_todo(todo: ToDo):
     insert_query = "INSERT INTO todos(title, description) VALUES (?, ?) RETURNING *;"
     params = (todo.title, todo.description)
-    result = utils.execute_query(TODO_SQL_DB, insert_query, params, commit=True, return_value=True)
+    try:
+        result = utils.execute_query(TODO_SQL_DB, insert_query, params, commit=True, return_value=True)
+    except IntegrityError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"title must be unique ('{todo.title}')")
     todo_id, title, description = result[0]
     todo_list_item = {
         "id": todo_id,
@@ -47,8 +51,14 @@ def create_todo(todo: ToDo):
 def update_todo(todo_id: int, todo: ToDo):
     update_query = "UPDATE todos SET title = ?, description = ? WHERE id = ? RETURNING *;"
     params = (todo.title, todo.description, todo_id)
-    result = utils.execute_query(TODO_SQL_DB, update_query, params, commit=True, return_value=True)
-    todo_id, title, description = result[0]
+    try:
+        result = utils.execute_query(TODO_SQL_DB, update_query, params, commit=True, return_value=True)
+    except IntegrityError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"title must be unique ('{todo.title}')")
+    try:
+        todo_id, title, description = result[0]
+    except IndexError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"id not found ({todo_id})")
     todo_list_item = {
         "id": todo_id,
         "title": title,
@@ -59,21 +69,28 @@ def update_todo(todo_id: int, todo: ToDo):
 
 @app.delete("/todos/{todo_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_todo(todo_id: int):
+    try:
+        select_query = "SELECT * FROM todos WHERE id = ?;"
+        params = (todo_id,)
+        result = utils.execute_query(TODO_SQL_DB, select_query, params, return_value=True)
+        result[0]
+    except IndexError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"id not found ({todo_id})")
     delete_query = "DELETE FROM todos WHERE id = ?;"
     params = (todo_id,)
     utils.execute_query(TODO_SQL_DB, delete_query, params, commit=True)
 
 
 class PaginationQuery(BaseModel):
-    page: Optional[int] = 1
-    limit: Optional[int] = 10
+    page: Optional[int] = Field(default=1, gt=0, le=20)
+    limit: Optional[int] = Field(default=10, ge=0, le=20)
 
 
 class PaginatedToDoView(BaseModel):
     data: list[ToDoListItem]
-    page: int = Field(gt=0)
-    limit: int = Field(gt=0,lte=20)
-    total: int = Field(gte=0,lte=20)
+    page: int
+    limit: int
+    total: int = Field(ge=0, le=20)
 
 
 @app.get("/todos/", response_model=PaginatedToDoView)
