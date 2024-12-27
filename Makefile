@@ -43,3 +43,7 @@ run:
 dev: install
 	@echo "Running app in dev mode"
 	$(VENV)/uvicorn $(APP) --reload --port 5000
+
+.PHONY: db
+db:
+	$(VENV)/python init_db.py
