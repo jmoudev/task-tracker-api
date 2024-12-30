@@ -1,7 +1,7 @@
 VENV_ROOT=.venv
 VENV=$(VENV_ROOT)/bin
 
-APP=main:app
+APP=src.main:app
 
 .PHONY: remove-venv
 remove-venv:
