@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlmodel import Session, select
 
 from .database import create_db_and_tables, get_session
-from .models import PaginatedToDoView, PaginationQuery, ToDo
+from .models.todos import PaginatedToDoView, PaginationQuery, ToDo
 
 
 SessionDep = Annotated[Session, Depends(get_session)]
