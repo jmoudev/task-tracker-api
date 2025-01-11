@@ -1,9 +1,9 @@
 from sqlmodel import select
 
-from ..models.users import User
+from ..models.users import UserData
 
 
-def get_user(email, session):
-    statement = select(User).where(User.email == email)
-    user = session.exec(statement).one()
-    return user
+def get_user_data(email, session):
+    statement = select(UserData).where(UserData.email == email)
+    user_data = session.exec(statement).one()
+    return user_data

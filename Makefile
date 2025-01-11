@@ -2,6 +2,7 @@ VENV_ROOT=.venv
 VENV=$(VENV_ROOT)/bin
 
 APP=src.main:app
+DB_NAME=todos.db
 
 .PHONY: remove-venv
 remove-venv:
@@ -45,5 +46,6 @@ dev: install
 	$(VENV)/uvicorn $(APP) --reload --port 5000
 
 .PHONY: db
-db:
-	$(VENV)/python init_db.py
+clean-db:
+	@echo "Cleaning db"
+	rm -rf $(DB_NAME)

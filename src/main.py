@@ -14,11 +14,12 @@ from .authentication import (
     SECRET_KEY,
     authenticate_user,
     create_access_token,
+    get_password_hash,
 )
-from .controllers.users import get_user
+from .controllers.users import get_user_data
 from .database import create_db_and_tables, get_session
 from .models.todos import PaginatedToDoView, PaginationQuery, ToDo
-from .models.users import Token, TokenData, User
+from .models.users import Token, TokenData, User, UserData
 
 
 SessionDep = Annotated[Session, Depends(get_session)]
@@ -37,9 +38,14 @@ def on_startup():
 def root():
     return {"message": "Hello, world!"}
 
+
 @app.post("/register", response_model=Token)
 def create_user(user: User, session: SessionDep):
-    session.add(user)
+    hashed_password = get_password_hash(user.password)
+    user_data = UserData(
+        name=user.name, email=user.email, hashed_password=hashed_password
+    )
+    session.add(user_data)
     try:
         session.commit()
     except IntegrityError:
@@ -47,9 +53,11 @@ def create_user(user: User, session: SessionDep):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"email must be unique ('{user.email}')",
         )
-    session.refresh(user)
+    session.refresh(user_data)
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    token = create_access_token({"sub": user.email}, expires_delta=access_token_expires)
+    token = create_access_token(
+        {"sub": user_data.email}, expires_delta=access_token_expires
+    )
     return Token(token=token)
 
 
@@ -57,21 +65,23 @@ def create_user(user: User, session: SessionDep):
 def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()], session: SessionDep
 ):
-    user = authenticate_user(session, form_data.username, form_data.password)
-    if not user:
+    user_data = authenticate_user(session, form_data.username, form_data.password)
+    if not user_data:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    token = create_access_token({"sub": user.email}, expires_delta=access_token_expires)
+    token = create_access_token(
+        {"sub": user_data.email}, expires_delta=access_token_expires
+    )
     return Token(token=token)
 
 
 @app.get("/users")
 def get_users(session: SessionDep):
-    statement = select(User)
+    statement = select(UserData)
     users = session.exec(statement).all()
     return users
 
@@ -92,7 +102,7 @@ def get_current_user(
         token_data = TokenData(email=email)
     except InvalidTokenError:
         raise credentials_exception
-    user = get_user(session=session, email=token_data.email)
+    user = get_user_data(session=session, email=token_data.email)
     if user is None:
         raise credentials_exception
     return user
