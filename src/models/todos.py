@@ -3,15 +3,12 @@ from typing import Optional
 from pydantic import BaseModel
 from sqlmodel import Field, SQLModel
 
-# ORM Models
 
 class ToDo(SQLModel, table=True):
     id: Optional[int] = Field(primary_key=True)
     title: str = Field(unique=True)
     description: str
 
-
-# Pydantic Models
 
 class PaginationQuery(BaseModel):
     page: Optional[int] = Field(default=1, gt=0, le=20)

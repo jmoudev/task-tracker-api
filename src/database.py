@@ -1,6 +1,6 @@
 from sqlmodel import Session, SQLModel, create_engine
 
-    
+
 TODO_SQL_DB = "todos.db"
 sqlite_url = f"sqlite:///{TODO_SQL_DB}"
 connect_args = {"check_same_thread": False}
