@@ -18,7 +18,7 @@ from .authentication import (
 )
 from .controllers.users import get_user_data
 from .database import create_db_and_tables, get_session
-from .models.todos import PaginatedToDoView, PaginationQuery, ToDo
+from .models.todos import PaginatedToDoResponse, PaginationQuery, ToDo, ToDoResponse
 from .models.users import Token, TokenData, User, UserData
 
 
@@ -111,7 +111,8 @@ def get_current_user(
 @app.post("/todos", status_code=status.HTTP_201_CREATED)
 def create_todo(
     todo: ToDo, user: Annotated[User, Depends(get_current_user)], session: SessionDep
-) -> ToDo:
+) -> ToDoResponse:
+    todo.email = user.email
     session.add(todo)
     try:
         session.commit()
@@ -130,7 +131,7 @@ def update_todo(
     todo: ToDo,
     session: SessionDep,
     user: Annotated[User, Depends(get_current_user)],
-) -> ToDo:
+) -> ToDoResponse:
     statement = select(ToDo).where(ToDo.id == todo_id)
     result = session.exec(statement)
     try:
@@ -138,6 +139,10 @@ def update_todo(
     except NoResultFound:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"id not found ({todo_id})"
+        )
+    if user.email != updated_todo.email:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden"
         )
     updated_todo.title = todo.title
     updated_todo.description = todo.description
@@ -165,14 +170,18 @@ def delete_todo(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"id not found ({todo_id})"
         )
+    if user.email != todo.email:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden"
+        )
     session.delete(todo)
     session.commit()
 
 
-@app.get("/todos/", response_model=PaginatedToDoView)
+@app.get("/todos/")
 def get_todos(
     pagination_query: Annotated[PaginationQuery, Query()], session: SessionDep
-) -> PaginatedToDoView:
+) -> PaginatedToDoResponse:
     offset = pagination_query.limit * (pagination_query.page - 1)
     statement = select(ToDo).offset(offset).limit(pagination_query.limit)
     todo_list_page = session.exec(statement).all()
